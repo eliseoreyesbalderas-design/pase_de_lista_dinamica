@@ -2,485 +2,1139 @@
 <html lang="es">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Asistencia Inteligente • Conteo + Checklist</title>
-  <meta name="description" content="App web para pasar lista: cuenta personas/rostros con la cámara o fotos y genera checklist desde CSV." />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <title>📋 Asistencia Inteligente - v6 Mobile (Con guardado de rostros)</title>
+  <meta name="description" content="App de asistencia con reconocimiento facial optimizada para móviles y tablets" />
   <style>
-    :root{
-      --brand:#2563eb; --ok:#16a34a; --warn:#f59e0b; --bad:#dc2626; --bg:#0f172a; --card:#111827;
-      --muted:#94a3b8; --ring:#334155;
-    }
-    *{box-sizing:border-box}
-    html,body{height:100%}
-    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial; background:linear-gradient(135deg,#0f172a,#1f2937); color:#e5e7eb}
-    .wrap{max-width:1100px;margin:0 auto;padding:20px}
-    header{display:flex;gap:14px;align-items:center;margin-bottom:16px}
-    header h1{font-size:clamp(20px,3.2vw,28px);margin:0}
-    header .badge{font-size:12px;background:#0ea5e9;color:#001; padding:4px 8px;border-radius:999px;font-weight:700}
-
-    .grid{display:grid;gap:16px; grid-template-columns:1.1fr .9fr}
-    @media (max-width:950px){.grid{grid-template-columns:1fr}}
-
-    .card{background:var(--card);border:1px solid var(--ring); border-radius:14px; overflow:hidden}
-    .card h2{margin:0;padding:14px 16px;border-bottom:1px solid var(--ring);font-size:16px;background:#0b1220}
-    .card .content{padding:14px 16px}
-
-    .stack{display:flex;flex-wrap:wrap;gap:10px}
-    button, .btn{appearance:none; cursor:pointer;border:1px solid #334155;background:#0b1220;color:#e5e7eb; padding:10px 14px;border-radius:10px;font-weight:600}
-    button:hover{border-color:#475569}
-    .pri{background:var(--brand); border-color:transparent;color:white}
-    .ok{background:var(--ok); border-color:transparent}
-    .bad{background:var(--bad); border-color:transparent}
-    .muted{background:#111827}
-    .ghost{background:transparent}
-    .pill{border-radius:999px}
+    /* --- (estilos idénticos a los originales, acortados aquí para brevedad en el ejemplo) --- */
+    :root{--primary:#3b82f6; --success:#22c55e; --warning:#f59e0b; --error:#ef4444; --bg:#0f172a; --card:#1e293b; --border:#334155; --text:#e2e8f0; --text-muted:#94a3b8; --accent:#8b5cf6; --surface:#0b1426;}
+    *{box-sizing:border-box; -webkit-tap-highlight-color:transparent}
+    html,body{height:100%; margin:0; overflow-x:hidden}
+    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Oxygen,Ubuntu,Cantarell,sans-serif;background:linear-gradient(135deg,#0f172a 0%,#1e293b 100%);color:var(--text); font-size:16px; line-height:1.5;}
+    .container{max-width:100%; padding:12px; margin:0 auto}
+    .header{display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; padding:12px 0; border-bottom:1px solid var(--border);}
+    .logo{font-size:20px; font-weight:700; color:var(--primary)}
+    .status{display:flex; align-items:center; gap:8px; font-size:12px; background:var(--surface); padding:6px 10px; border-radius:20px;}
+    .status-dot{width:6px; height:6px; border-radius:50%; background:var(--error)}
+    .status-dot.ready{background:var(--success)}
+    .status-dot.loading{background:var(--warning); animation:pulse 1.5s infinite}
+    .cards{display:flex; flex-direction:column; gap:16px}
+    @media (min-width:900px){.cards{flex-direction:row; align-items:flex-start}}
+    .card{background:var(--card); border:1px solid var(--border); border-radius:12px; overflow:hidden;}
+    .card-header{padding:14px 16px; background:var(--surface); font-weight:600; font-size:16px; display:flex; align-items:center; gap:8px;}
+    .card-body{padding:16px}
+    .camera-card{flex:1; min-height:400px}
+    .camera-container{position:relative; background:var(--surface); border-radius:8px; overflow:hidden; margin-bottom:12px;}
+    .camera-video{width:100%; height:50vh; max-height:400px; object-fit:cover; display:block;}
+    .camera-overlay{position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:2;}
+    .camera-status{position:absolute; top:8px; left:8px; right:8px; z-index:3; background:rgba(0,0,0,0.8); color:white; padding:6px 10px; border-radius:6px; font-size:12px; text-align:center;}
+    .sweep-badge{position:absolute; top:8px; right:8px; z-index:3; background:var(--accent); color:white; padding:6px 12px; border-radius:20px; font-size:11px; font-weight:600; animation:glow 2s infinite alternate;}
+    @keyframes glow{from{box-shadow:0 0 5px var(--accent)} to{box-shadow:0 0 20px var(--accent)}}
+    .controls{display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px}
+    .btn{background:var(--surface); border:1px solid var(--border); color:var(--text); padding:12px 16px; border-radius:8px; font-size:14px; font-weight:500; cursor:pointer; user-select:none; transition:all 0.2s ease; display:flex; align-items:center; gap:6px; min-height:44px;}
+    .btn:hover:not(:disabled){background:var(--border); transform:translateY(-1px)}
+    .btn:active{transform:translateY(0)}
+    .btn:disabled{opacity:0.5; cursor:not-allowed}
+    .btn.primary{background:var(--primary); border-color:var(--primary); color:white}
+    .btn.success{background:var(--success); border-color:var(--success); color:white}
+    .btn.warning{background:var(--warning); border-color:var(--warning); color:black}
+    .btn.error{background:var(--error); border-color:var(--error); color:white}
+    .btn.accent{background:var(--accent); border-color:var(--accent); color:white}
+    .settings{display:flex; flex-wrap:wrap; gap:12px; align-items:center; background:var(--surface); padding:12px; border-radius:8px; margin-bottom:12px;}
+    .setting-group{display:flex; align-items:center; gap:6px; font-size:13px}
+    .setting-group input[type="range"]{width:80px}
+    .kpis{display:grid; grid-template-columns:repeat(auto-fit,minmax(70px,1fr)); gap:8px; margin-bottom:12px;}
+    .kpi{background:var(--surface); padding:10px 8px; border-radius:8px; text-align:center; border:1px solid var(--border);}
+    .kpi-value{font-size:20px; font-weight:700; color:var(--primary)}
+    .kpi-label{font-size:10px; color:var(--text-muted); margin-top:2px}
+    .student-card{flex:1; min-width:300px; max-width:400px}
+    .student-list{max-height:60vh; overflow-y:auto; margin-top:12px}
+    .student-item{display:flex; align-items:center; gap:12px; padding:12px; background:var(--surface); border:1px solid var(--border); border-radius:8px; margin-bottom:8px;}
+    .student-checkbox{width:20px; height:20px; cursor:pointer; accent-color:var(--success);}
+    .student-info{flex:1; min-width:0}
+    .student-name{font-weight:500; margin-bottom:2px}
+    .student-id{font-size:12px; color:var(--text-muted)}
+    .student-status{padding:4px 8px; border-radius:12px; font-size:11px; font-weight:600;}
+    .student-status.present{background:rgba(34,197,94,0.2); color:var(--success)}
+    .student-status.absent{background:rgba(239,68,68,0.2); color:var(--error)}
+    .register-btn{padding:6px 10px; font-size:11px; border-radius:6px; background:transparent; border:1px solid var(--accent); color:var(--accent);}
+    .register-btn.has-face{background:var(--success); border-color:var(--success); color:white}
+    .input{background:var(--surface); border:1px solid var(--border); color:var(--text); padding:12px; border-radius:8px; width:100%; font-size:14px;}
+    .file-input{display:none}
+    .file-label{display:inline-flex; align-items:center; gap:6px; background:var(--surface); border:1px dashed var(--border); padding:12px 16px; border-radius:8px; cursor:pointer; font-size:14px; min-height:44px;}
+    .loading-overlay{position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:9999; display:flex; flex-direction:column; align-items:center; justify-content:center; color:white; text-align:center;}
+    .loading-spinner{width:40px; height:40px; border:3px solid rgba(255,255,255,0.3); border-top:3px solid var(--primary); border-radius:50%; animation:spin 1s linear infinite; margin-bottom:16px;}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .modal{position:fixed; top:0; left:0; width:100%; height:100%; z-index:1000; background:rgba(0,0,0,0.8); display:flex; align-items:center; justify-content:center; padding:20px; box-sizing:border-box;}
+    .modal-content{background:var(--card); border-radius:12px; width:100%; max-width:500px; max-height:90vh; overflow-y:auto;}
+    .modal-header{padding:16px 20px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center;}
+    .modal-body{padding:20px}
+    .modal-camera{width:100%; height:250px; background:var(--surface); border-radius:8px; margin:12px 0; position:relative; overflow:hidden;}
+    .modal-camera canvas{width:100%; height:100%; object-fit:cover}
+    .sweep-panel{background:rgba(139,92,246,0.1); border:1px solid var(--accent); border-radius:8px; padding:12px; margin-top:12px;}
+    .sweep-zones{margin-top:8px}
+    .zone-item{display:flex; justify-content:space-between; align-items:center; background:var(--surface); padding:6px 10px; border-radius:6px; margin-bottom:4px; font-size:12px;}
+    .zone-count{background:var(--accent); color:white; padding:2px 6px; border-radius:10px; font-size:10px; font-weight:600;}
+    .confidence-bar{width:100%; height:4px; background:var(--surface); border-radius:2px; overflow:hidden; margin:6px 0;}
+    .confidence-fill{height:100%; background:linear-gradient(90deg,var(--error),var(--warning),var(--success)); transition:width 0.3s ease;}
+    .toast{position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:var(--card); border:1px solid var(--border); border-radius:8px; padding:12px 20px; z-index:1001; box-shadow:0 4px 12px rgba(0,0,0,0.3); max-width:90vw;}
+    .toast.success{border-color:var(--success); color:var(--success)}
+    .toast.error{border-color:var(--error); color:var(--error)}
     .hidden{display:none!important}
-
-    .video-wrap{position:relative;background:#0b1220;border-radius:10px; overflow:hidden;border:1px solid var(--ring)}
-    video, canvas{display:block;width:100%}
-    video{height:min(60vh,420px);object-fit:cover}
-    canvas{position:absolute; inset:0; pointer-events:none}
-
-    .row{display:flex; gap:10px; align-items:center; flex-wrap:wrap}
-    .grow{flex:1}
-
-    .kpi{display:grid; grid-template-columns:repeat(4,1fr); gap:10px}
-    @media (max-width:700px){.kpi{grid-template-columns:repeat(2,1fr)}}
-    .kpi .tile{background:#0b1220;border:1px solid var(--ring);border-radius:12px;padding:12px}
-    .kpi .n{font-size:28px;font-weight:800}
-    .kpi small{color:var(--muted)}
-
-    .list{max-height:52vh; overflow:auto; display:grid; gap:8px}
-    .item{display:grid; grid-template-columns:auto 1fr auto; gap:10px; align-items:center; background:#0b1220;border:1px solid var(--ring); border-radius:10px; padding:10px}
-    .item input[type="checkbox"]{transform:scale(1.2)}
-    .name{white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
-    .badge{padding:2px 8px;border-radius:999px;font-size:12px;font-weight:700}
-    .present{background:rgba(22,163,74,.15); color:#86efac; border:1px solid rgba(22,163,74,.35)}
-    .absent{background:rgba(220,38,38,.15); color:#fecaca; border:1px solid rgba(220,38,38,.35)}
-
-    input[type="file"]{display:none}
-    label.file{border:1px dashed #334155; padding:10px 14px;border-radius:10px; cursor:pointer}
-    input[type="range"]{width:160px}
-
-    .foot{color:#94a3b8; font-size:12px; margin-top:8px}
-    .note{padding:10px; background:#0b1220;border:1px solid var(--ring); border-radius:10px}
+    @media (max-width:480px){.container{padding:8px}.header{flex-direction:column; gap:8px; text-align:center}.controls{justify-content:center}.btn{flex:1; min-width:120px; justify-content:center}.settings{flex-direction:column; align-items:stretch; gap:8px}.setting-group{justify-content:space-between}.kpis{grid-template-columns:repeat(3,1fr)}}
+    @keyframes pulse{0%,100%{opacity:1} 50%{opacity:0.6}}
+    .progress-container { width: 80%; max-width: 300px; background: var(--surface); border-radius: 10px; margin: 15px 0; overflow: hidden; }
+    .progress-bar { height: 10px; background: var(--primary); border-radius: 10px; width: 0%; transition: width 0.3s ease; }
   </style>
 </head>
 <body>
-  <div class="wrap">
-    <header>
-      <h1>📋 Asistencia Inteligente</h1>
-      <span class="badge">v3</span>
-    </header>
-
-    <div class="grid">
-      <!-- CÁMARA / FOTO -->
-      <section class="card">
-        <h2>🎥 Conteo automático</h2>
-        <div class="content">
-          <div class="row" style="gap:12px">
-            <div class="row" style="gap:6px">
-              <strong>Modelo:</strong>
-              <label><input type="radio" name="model" value="people" checked /> Personas (COCO‑SSD)</label>
-              <label><input type="radio" name="model" value="faces" /> Rostros (BlazeFace)</label>
-            </div>
-            <div class="row" style="gap:6px">
-              <strong>Umbral:</strong>
-              <input id="th" type="range" min="0" max="100" value="50" />
-              <span id="thv">50%</span>
-            </div>
-          </div>
-
-          <div class="video-wrap" id="vw">
-            <video id="video" playsinline autoplay muted></video>
-            <canvas id="overlay"></canvas>
-          </div>
-
-          <div class="row" style="margin-top:10px">
-            <button class="pri" id="startCam">Iniciar cámara</button>
-            <button class="bad" id="stopCam" disabled>Detener cámara</button>
-            <button class="muted" id="snap" disabled>Capturar</button>
-            <input id="photoFile" type="file" accept="image/*" />
-            <label for="photoFile" class="file">📷 Detectar desde foto</label>
-          </div>
-
-          <div class="kpi" style="margin-top:12px">
-            <div class="tile"><div class="n" id="kDetected">0</div><small>Detectados</small></div>
-            <div class="tile"><div class="n" id="kStudents">0</div><small>En lista</small></div>
-            <div class="tile"><div class="n" id="kPresent">0</div><small>Presentes</small></div>
-            <div class="tile"><div class="n" id="kAbsent">0</div><small>Ausentes</small></div>
-          </div>
-
-          <div id="msg" class="foot"></div>
-        </div>
-      </section>
-
-      <!-- CHECKLIST / CSV -->
-      <section class="card">
-        <h2>📝 Lista y CSV</h2>
-        <div class="content">
-          <div class="row">
-            <input id="csvFile" type="file" accept=".csv" />
-            <label for="csvFile" class="file">📄 Cargar alumnos (.csv)</label>
-            <button id="downloadTpl" class="ghost">Descargar plantilla</button>
-            <input id="search" placeholder="Buscar…" class="grow" style="padding:10px;border-radius:10px;border:1px solid var(--ring); background:#0b1220;color:#e5e7eb" />
-          </div>
-
-          <div class="row" style="margin-top:8px">
-            <button id="markAll" class="ok">Marcar todos</button>
-            <button id="clearAll" class="muted">Limpiar marcas</button>
-            <button id="saveLocal" class="muted">Guardar local</button>
-            <button id="loadLocal" class="ghost">Cargar guardado</button>
-            <button id="exportCsv" class="pri">Exportar asistencia CSV</button>
-          </div>
-
-          <div class="list" id="list"></div>
-
-          <div class="note" style="margin-top:10px">
-            <b>Cómo usar:</b> 1) Carga la <i>lista de alumnos</i> desde un CSV (columna «Nombre» obligatoria, «ID» opcional). 2) Usa el conteo automático como referencia. 3) Marca presentes en la lista y exporta el reporte.
-          </div>
-        </div>
-      </section>
+  <!-- Loading overlay -->
+  <div id="loadingOverlay" class="loading-overlay">
+    <div class="loading-spinner"></div>
+    <div id="loadingText">Cargando modelos de IA...</div>
+    <div class="progress-container">
+      <div id="progressBar" class="progress-bar"></div>
     </div>
-
-    <p class="foot">Todo el procesamiento ocurre localmente en tu navegador. Para mejor rendimiento usa Chrome/Edge en HTTPS.
-    </p>
+    <div id="loadingDetails" style="font-size:12px; color:rgba(255,255,255,0.7); margin-top:8px">
+      Preparando componentes...
+    </div>
   </div>
 
-  <!-- Librerías (CDN confiables y versionadas) -->
-  <!-- TensorFlow.js -->
+  <div class="container">
+    <!-- Header -->
+    <header class="header">
+      <div class="logo">📋 Asistencia Inteligente</div>
+      <div class="status">
+        <div id="statusDot" class="status-dot loading"></div>
+        <span id="statusText">Iniciando...</span>
+      </div>
+    </header>
+
+    <div class="cards">
+      <!-- Cámara y detección -->
+      <div class="card camera-card">
+        <div class="card-header">🎥 Detección Automática</div>
+        <div class="card-body">
+          <div class="settings">
+            <div class="setting-group">
+              <span>Modo:</span>
+              <label><input type="radio" name="mode" value="people" checked> Personas</label>
+              <label><input type="radio" name="mode" value="faces"> Rostros</label>
+              <label><input type="radio" name="mode" value="faces-id"> Con ID</label>
+            </div>
+            <div class="setting-group">
+              <span>Precisión:</span>
+              <input id="threshold" type="range" min="30" max="90" value="50">
+              <span id="thresholdValue">50%</span>
+            </div>
+          </div>
+
+          <div class="camera-container">
+            <video id="video" class="camera-video" playsinline autoplay muted></video>
+            <canvas id="overlay" class="camera-overlay"></canvas>
+            <div id="cameraStatus" class="camera-status">Toca "Iniciar" para comenzar</div>
+            <div id="sweepBadge" class="sweep-badge hidden">🔄 ESCANEANDO</div>
+          </div>
+
+          <div class="controls">
+            <button id="startBtn" class="btn primary">▶️ Iniciar</button>
+            <button id="stopBtn" class="btn error" disabled>⏹️ Detener</button>
+            <button id="captureBtn" class="btn" disabled>📸 Capturar</button>
+            <input id="photoInput" type="file" accept="image/*" class="file-input">
+            <label for="photoInput" class="file-label">🖼️ Foto</label>
+          </div>
+
+          <div class="controls">
+            <button id="sweepBtn" class="btn accent" disabled>🔄 Escanear Aula</button>
+            <button id="stopSweepBtn" class="btn warning" disabled>⏹️ Finalizar</button>
+            <button id="autoMarkBtn" class="btn success" disabled>✨ Marcar Auto</button>
+          </div>
+
+          <div class="kpis">
+            <div class="kpi"><div class="kpi-value" id="kpiDetected">0</div><div class="kpi-label">Detectados</div></div>
+            <div class="kpi"><div class="kpi-value" id="kpiTotal">0</div><div class="kpi-label">Total</div></div>
+            <div class="kpi"><div class="kpi-value" id="kpiPresent">0</div><div class="kpi-label">Presentes</div></div>
+            <div class="kpi"><div class="kpi-value" id="kpiAbsent">0</div><div class="kpi-label">Ausentes</div></div>
+          </div>
+
+          <div id="sweepPanel" class="sweep-panel hidden">
+            <div style="display:flex; justify-content:space-between; margin-bottom:8px">
+              <strong>🗺️ Zonas Escaneadas</strong>
+              <span>Confianza: <span id="sweepConfidence">0%</span></span>
+            </div>
+            <div class="confidence-bar"><div id="confidenceFill" class="confidence-fill" style="width:0%"></div></div>
+            <div id="sweepZones" class="sweep-zones"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Lista de estudiantes -->
+      <div class="card student-card">
+        <div class="card-header">📚 Lista de Estudiantes</div>
+        <div class="card-body">
+          <input id="searchInput" class="input" placeholder="🔍 Buscar estudiante..." style="margin-bottom:12px">
+          
+          <div class="controls">
+            <input id="csvInput" type="file" accept=".csv" class="file-input">
+            <label for="csvInput" class="file-label">📄 Cargar CSV</label>
+            <button id="templateBtn" class="btn">📋 Plantilla</button>
+          </div>
+
+          <div class="controls">
+            <button id="markAllBtn" class="btn success">✅ Todos</button>
+            <button id="clearAllBtn" class="btn">❌ Ninguno</button>
+            <button id="exportBtn" class="btn primary">💾 Exportar</button>
+          </div>
+
+          <!-- Nueva fila: respaldo facebank -->
+          <div class="controls" style="margin-top:8px">
+            <button id="exportFacebankBtn" class="btn">📤 Exportar Rostros (JSON)</button>
+            <input id="importFacebankInput" type="file" accept="application/json" class="file-input">
+            <label for="importFacebankInput" class="file-label">📥 Importar Rostros</label>
+          </div>
+
+          <div id="studentList" class="student-list">
+            <div style="text-align:center; color:var(--text-muted); padding:40px 20px">
+              📋 Carga un archivo CSV para comenzar<br>
+              <small>Usa el botón "Plantilla" para descargar un ejemplo</small>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal registro -->
+  <div id="registerModal" class="modal hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div>
+          <strong>🎯 Registrar Rostro</strong>
+          <div id="modalStudentName" style="font-size:12px; color:var(--text-muted)"></div>
+        </div>
+        <button id="closeModalBtn" class="btn">✖️</button>
+      </div>
+      <div class="modal-body">
+        <div class="controls">
+          <button id="useFrameBtn" class="btn success">📷 Usar Cámara</button>
+          <input id="faceInput" type="file" accept="image/*" class="file-input">
+          <label for="faceInput" class="file-label">🖼️ Subir Foto</label>
+        </div>
+        <div class="modal-camera">
+          <canvas id="faceCanvas"></canvas>
+        </div>
+        <div style="text-align:center">
+          <button id="saveFaceBtn" class="btn primary" disabled>💾 Guardar Muestra</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts (mismas librerías) -->
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.12.0/dist/tf.min.js"></script>
-  <!-- Modelos: COCO-SSD y BlazeFace -->
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.3/dist/coco-ssd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/blazeface@0.0.7/dist/blazeface.min.js"></script>
-  <!-- CSV parser -->
+  <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 
   <script>
-  // ====== Estado ======
-  const el = (id)=>document.getElementById(id);
-  const video = el('video');
-  const canvas = el('overlay');
-  const ctx = canvas.getContext('2d');
-  const msg = el('msg');
-
-  let stream = null;
-  let loopReq = null;
-  let activeModel = 'people'; // 'people' | 'faces'
-  let coco = null, blaze = null;
-  let threshold = 0.5; // 0..1
-  let detectedCount = 0;
-
-  let students = []; // {id,name,present}
-
-  // ====== Util ======
-  const setMsg = (t)=> msg.textContent = t || '';
-  const fmtPct = (x)=> Math.round(x*100)+'%';
-
-  function resizeCanvasToVideo(){
-    if(!video.videoWidth) return;
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-  }
-
-  function updateKPIs(){
-    const total = students.length;
-    const present = students.filter(s=>s.present).length;
-    el('kDetected').textContent = detectedCount;
-    el('kStudents').textContent = total;
-    el('kPresent').textContent = present;
-    el('kAbsent').textContent = Math.max(0,total-present);
-  }
-
-  function renderList(filter=''){
-    const list = el('list');
-    list.innerHTML = '';
-    const q = filter.trim().toLowerCase();
-    students.forEach((s,i)=>{
-      if(q && !s.name.toLowerCase().includes(q) && !(s.id||'').toLowerCase().includes(q)) return;
-      const row = document.createElement('div');
-      row.className = 'item';
-      row.innerHTML = `
-        <input type="checkbox" ${s.present?'checked':''} aria-label="${s.name}" />
-        <div class="name">${s.id?`<small style='color:var(--muted)'>${s.id}</small> · `:''}${s.name}</div>
-        <span class="badge ${s.present?'present':'absent'}">${s.present?'Presente':'Ausente'}</span>`;
-      const cb = row.querySelector('input');
-      const badge = row.querySelector('.badge');
-      cb.addEventListener('change',()=>{
-        s.present = cb.checked;
-        badge.textContent = s.present?'Presente':'Ausente';
-        badge.className = 'badge ' + (s.present?'present':'absent');
-        updateKPIs();
-      });
-      list.appendChild(row);
-    });
-    updateKPIs();
-  }
-
-  function loadCSVFile(file){
-    return new Promise((resolve,reject)=>{
-      Papa.parse(file,{
-        header:true, skipEmptyLines:true, encoding:'utf-8',
-        complete:(res)=>{
-          try{
-            const rows = res.data;
-            const out = [];
-            rows.forEach(r=>{
-              const name = (r.Nombre||r.NOMBRE||r.name||r.Name||'').toString().trim();
-              const id = (r.ID||r.Id||r.id||'').toString().trim();
-              if(name) out.push({id, name, present:false});
-            });
-            if(!out.length) throw new Error('No se encontró columna "Nombre" con datos.');
-            resolve(out);
-          }catch(e){reject(e)}
+    // ===== CONFIGURACIÓN =====
+    const CONFIG = {
+      models: {
+        faceApiUrl: 'https://justadudewhohacks.github.io/face-api.js/models',
+        faceDetOptions: new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.5 })
+      },
+      recognition: {
+        threshold: 0.6,
+        throttleMs: 800
+      },
+      camera: {
+        constraints: {
+          video: {
+            facingMode: 'environment',
+            width: { ideal: 1280 },
+            height: { ideal: 720 }
+          }
         },
-        error:(err)=>reject(err)
+        fallbackConstraints: {
+          video: {
+            width: { ideal: 640 },
+            height: { ideal: 480 }
+          }
+        }
+      },
+      ui: {
+        detectionInterval: 150,
+        sweepInterval: 300
+      }
+    };
+
+    // ===== ESTADO GLOBAL =====
+    class AppState {
+      constructor() {
+        this.models = { coco: null, blazeface: null, faceApiLoaded: false };
+        this.camera = { stream: null, video: null, canvas: null, ctx: null, isRunning: false, animationFrame: null };
+        this.detection = { mode: 'people', threshold: 0.5, currentCount: 0, lastRecognition: 0 };
+        this.students = [];
+        // facebank: Map<id, { name, descriptors: Float32Array[], images: [dataURL,...] }>
+        this.facebank = new Map();
+        this.sweep = { active: false, zones: new Map(), totalUnique: 0, confidence: 0 };
+        this.ui = { currentStudentIndex: -1, modalOpen: false };
+      }
+    }
+    const state = new AppState();
+
+    // ===== UTILIDADES =====
+    const $ = (id) => document.getElementById(id);
+    const $$ = (selector) => document.querySelectorAll(selector);
+
+    function showToast(message, type = 'info') {
+      const existing = document.querySelector('.toast');
+      if (existing) existing.remove();
+      const toast = document.createElement('div');
+      toast.className = `toast ${type}`;
+      toast.textContent = message;
+      document.body.appendChild(toast);
+      setTimeout(() => toast.remove(), 3000);
+    }
+    function updateStatus(text, ready = false) {
+      $('statusText').textContent = text;
+      $('statusDot').className = `status-dot ${ready ? 'ready' : 'loading'}`;
+    }
+    function updateCameraStatus(text) { $('cameraStatus').textContent = text; }
+    function updateProgress(step, total, message) {
+      const progress = Math.round((step / total) * 100);
+      $('progressBar').style.width = `${progress}%`;
+      $('loadingDetails').textContent = message;
+    }
+
+    // ===== INDEXEDDB HELPERS (simple) =====
+    const DB_NAME = 'attendance_db_v1';
+    const DB_STORE = 'facebank';
+
+    function openDB() {
+      return new Promise((resolve, reject) => {
+        if (!window.indexedDB) return reject(new Error('IndexedDB no está disponible'));
+        const req = indexedDB.open(DB_NAME, 1);
+        req.onupgradeneeded = (e) => {
+          const db = e.target.result;
+          if (!db.objectStoreNames.contains(DB_STORE)) {
+            db.createObjectStore(DB_STORE, { keyPath: 'id' });
+          }
+        };
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
       });
-    });
-  }
-
-  function downloadTemplate(){
-    const csv = 'ID,Nombre\n2023001,Ana Pérez\n2023002,Carlos López\n';
-    const blob = new Blob([csv],{type:'text/csv;charset=utf-8;'});
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = 'plantilla_alumnos.csv';
-    document.body.appendChild(a); a.click(); a.remove();
-  }
-
-  function exportAttendance(){
-    const now = new Date();
-    const date = now.toLocaleDateString('es-ES');
-    const time = now.toLocaleTimeString('es-ES');
-    let csv = 'Reporte de Asistencia\n';
-    csv += `Fecha,${date}\nHora,${time}\nDetectados,${detectedCount}\n\n`;
-    csv += 'ID,Nombre,Estado,Fecha,Hora\n';
-    students.forEach(s=>{
-      csv += `${JSON.stringify(s.id||'')},${JSON.stringify(s.name)},${s.present?'Presente':'Ausente'},${date},${time}\n`;
-    });
-    const present = students.filter(s=>s.present).length;
-    csv += `\nRESUMEN\nTotal,${students.length}\nPresentes,${present}\nAusentes,${students.length-present}\nAsistencia,${students.length?((present/students.length*100).toFixed(1)+'%'):'0%'}\n`;
-    const blob = new Blob([csv],{type:'text/csv;charset=utf-8;'});
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = `asistencia_${now.toISOString().replace(/[:.]/g,'-')}.csv`;
-    document.body.appendChild(a); a.click(); a.remove();
-  }
-
-  function saveLocal(){
-    const data = {ts:Date.now(), students, detectedCount};
-    localStorage.setItem('asistencia_guardado', JSON.stringify(data));
-    setMsg('✅ Asistencia guardada localmente');
-    setTimeout(()=>setMsg(''),2000);
-  }
-  function loadLocal(){
-    const raw = localStorage.getItem('asistencia_guardado');
-    if(!raw){ setMsg('ℹ️ No hay guardados'); return; }
-    try{
-      const data = JSON.parse(raw);
-      students = (data.students||[]).map(s=>({id:s.id||'', name:s.name||'', present:!!s.present}));
-      renderList(el('search').value);
-      setMsg('✅ Cargado');
-      setTimeout(()=>setMsg(''),1500);
-    }catch(e){ setMsg('❌ Error cargando datos'); }
-  }
-
-  // ====== Detección ======
-  async function ensureModels(){
-    if(!coco){ coco = await cocoSsd.load({base:'lite_mobilenet_v2'}); }
-    if(!blaze){ blaze = await blazeface.load(); }
-  }
-
-  async function startCamera(){
-    try{
-      await ensureModels();
-      const constraints = {video:{facingMode:'environment', width:{ideal:1280}, height:{ideal:720}}};
-      stream = await navigator.mediaDevices.getUserMedia(constraints);
-      video.srcObject = stream;
-      await video.play();
-      resizeCanvasToVideo();
-      el('startCam').disabled = true; el('stopCam').disabled = false; el('snap').disabled = false;
-      setMsg('🎬 Cámara iniciada');
-      runLoop();
-    }catch(e){
-      console.error(e);
-      setMsg('❌ No se pudo acceder a la cámara. Permisos/HTTPS requeridos.');
     }
-  }
 
-  function stopCamera(){
-    if(loopReq){ cancelAnimationFrame(loopReq); loopReq = null; }
-    if(stream){ stream.getTracks().forEach(t=>t.stop()); stream = null; }
-    el('startCam').disabled = false; el('stopCam').disabled = true; el('snap').disabled = true;
-    ctx.clearRect(0,0,canvas.width,canvas.height);
-    setMsg('📴 Cámara detenida');
-  }
+    async function saveFacebankToIndexedDB(allData) {
+      try {
+        const db = await openDB();
+        const tx = db.transaction(DB_STORE, 'readwrite');
+        const store = tx.objectStore(DB_STORE);
+        // Guardar como un solo registro con id 'facebank'
+        await new Promise((res, rej) => {
+          const putReq = store.put({ id: 'facebank', data: allData });
+          putReq.onsuccess = () => res();
+          putReq.onerror = () => rej(putReq.error);
+        });
+        db.close();
+      } catch (e) {
+        console.warn('No se pudo guardar en IndexedDB:', e);
+      }
+    }
 
-  function drawBoxes(boxes, scores){
-    ctx.clearRect(0,0,canvas.width,canvas.height);
-    ctx.lineWidth = 3; ctx.font = '14px sans-serif';
-    boxes.forEach((b,i)=>{
-      const s = scores? scores[i] : 1;
-      if(s < threshold) return;
-      const [x,y,w,h] = b; // already in video pixels
-      ctx.strokeStyle = 'rgba(34,197,94,0.9)';
-      ctx.fillStyle = 'rgba(34,197,94,0.9)';
-      ctx.strokeRect(x,y,w,h);
-      const label = `${activeModel==='people'?'Persona':'Rostro'} ${Math.round(s*100)}%`;
-      ctx.fillText(label, x+4, Math.max(12, y-6));
-    });
-  }
+    async function loadFacebankFromIndexedDB() {
+      try {
+        const db = await openDB();
+        const tx = db.transaction(DB_STORE, 'readonly');
+        const store = tx.objectStore(DB_STORE);
+        const res = await new Promise((res, rej) => {
+          const getReq = store.get('facebank');
+          getReq.onsuccess = () => res(getReq.result ? getReq.result.data : null);
+          getReq.onerror = () => rej(getReq.error);
+        });
+        db.close();
+        return res;
+      } catch (e) {
+        console.warn('No se pudo leer IndexedDB:', e);
+        return null;
+      }
+    }
 
-  async function runLoop(){
-    let last = 0;
-    const step = async (t)=>{
-      loopReq = requestAnimationFrame(step);
-      if(t - last < 120) return; // ~8 fps throttle para móviles
-      last = t;
-      if(!video.videoWidth) return;
-      resizeCanvasToVideo();
-      try{
-        if(activeModel==='people'){
-          const preds = await coco.detect(video);
-          const p = preds.filter(o=>o.class==='person');
-          const boxes = p.map(o=>[o.bbox[0],o.bbox[1],o.bbox[2],o.bbox[3]]);
-          const scores = p.map(o=>o.score);
-          drawBoxes(boxes, scores);
-          detectedCount = p.filter(o=>o.score>=threshold).length;
-        }else{
-          const p = await blaze.estimateFaces(video, false);
-          // p[i].topLeft + bottomRight in pixels
-          const boxes = p.map(f=>{
-            const [x1,y1] = f.topLeft; const [x2,y2] = f.bottomRight; return [x1,y1,x2-x1,y2-y1];
+    // ===== CARGA DE MODELOS =====
+    async function loadModels() {
+      const loadingOverlay = $('loadingOverlay');
+      const loadingText = $('loadingText');
+      const totalSteps = 5;
+      let currentStep = 0;
+
+      try {
+        currentStep++;
+        updateProgress(currentStep, totalSteps, 'Cargando detector de personas...');
+        loadingText.textContent = 'Cargando detector de personas...';
+        state.models.coco = await cocoSsd.load({ base: 'lite_mobilenet_v2' });
+
+        currentStep++;
+        updateProgress(currentStep, totalSteps, 'Cargando detector de rostros...');
+        loadingText.textContent = 'Cargando detector de rostros...';
+        state.models.blazeface = await blazeface.load();
+
+        currentStep++;
+        updateProgress(currentStep, totalSteps, 'Cargando reconocimiento facial...');
+        loadingText.textContent = 'Cargando reconocimiento facial...';
+
+        faceapi.env.monkeyPatch({ BASE_PATH: CONFIG.models.faceApiUrl });
+
+        await Promise.all([
+          faceapi.nets.tinyFaceDetector.loadFromUri(CONFIG.models.faceApiUrl),
+          faceapi.nets.faceLandmark68Net.loadFromUri(CONFIG.models.faceApiUrl),
+          faceapi.nets.faceRecognitionNet.loadFromUri(CONFIG.models.faceApiUrl)
+        ]);
+        state.models.faceApiLoaded = true;
+
+        currentStep++;
+        updateProgress(currentStep, totalSteps, 'Preparando cámara...');
+        loadingText.textContent = 'Preparando cámara...';
+        await initCamera();
+
+        currentStep++;
+        updateProgress(currentStep, totalSteps, 'Cargando datos guardados...');
+        loadingText.textContent = 'Cargando datos guardados...';
+        await loadFaceBankFromStorage();
+
+        loadingOverlay.style.display = 'none';
+        updateStatus('Listo para usar', true);
+        showToast('✅ Aplicación lista para usar', 'success');
+
+      } catch (error) {
+        console.error('Error cargando modelos:', error);
+        loadingText.textContent = `Error: ${error.message}. Reintentando...`;
+        setTimeout(loadModels, 3000);
+      }
+    }
+
+    // ===== PERSISTENT STORAGE REQUEST =====
+    async function requestPersistentStorage() {
+      try {
+        if (navigator.storage && navigator.storage.persist) {
+          const isPersisted = await navigator.storage.persisted();
+          if (!isPersisted) {
+            const granted = await navigator.storage.persist();
+            if (granted) {
+              showToast('✅ Almacenamiento persistente habilitado', 'success');
+            } else {
+              showToast('⚠️ No se concedió persistencia. Los datos pueden eliminarse si el dispositivo necesita espacio.', 'error');
+            }
+          } else {
+            console.log('Almacenamiento ya persistente');
+          }
+        } else {
+          console.log('API StorageManager no disponible en este navegador');
+        }
+      } catch (e) {
+        console.warn('Error al solicitar persistencia:', e);
+      }
+    }
+
+    // ===== CÁMARA =====
+    async function initCamera() {
+      const video = $('video');
+      const canvas = $('overlay');
+      state.camera.video = video;
+      state.camera.canvas = canvas;
+      state.camera.ctx = canvas.getContext('2d');
+
+      video.addEventListener('loadedmetadata', () => {
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+      });
+    }
+
+    async function startCamera() {
+      try {
+        updateCameraStatus('Iniciando cámara...');
+        let constraints = CONFIG.camera.constraints;
+        try {
+          state.camera.stream = await navigator.mediaDevices.getUserMedia(constraints);
+        } catch (e) {
+          constraints = CONFIG.camera.fallbackConstraints;
+          state.camera.stream = await navigator.mediaDevices.getUserMedia(constraints);
+        }
+        state.camera.video.srcObject = state.camera.stream;
+        await state.camera.video.play();
+        state.camera.isRunning = true;
+        startDetectionLoop();
+        $('startBtn').disabled = true;
+        $('stopBtn').disabled = false;
+        $('captureBtn').disabled = false;
+        $('sweepBtn').disabled = false;
+        updateCameraStatus(`✅ Cámara activa - Modo: ${getModeLabel()}`);
+        showToast('📷 Cámara iniciada correctamente');
+      } catch (error) {
+        console.error('Error iniciando cámara:', error);
+        updateCameraStatus('❌ Error: Sin acceso a cámara');
+        showToast('⚠️ No se pudo acceder a la cámara', 'error');
+      }
+    }
+
+    function stopCamera() {
+      if (state.camera.animationFrame) {
+        cancelAnimationFrame(state.camera.animationFrame);
+      }
+      if (state.camera.stream) {
+        state.camera.stream.getTracks().forEach(track => track.stop());
+        state.camera.stream = null;
+      }
+      state.camera.isRunning = false;
+      state.sweep.active = false;
+      $('startBtn').disabled = false;
+      $('stopBtn').disabled = true;
+      $('captureBtn').disabled = true;
+      $('sweepBtn').disabled = true;
+      $('stopSweepBtn').disabled = true;
+      $('sweepBadge').classList.add('hidden');
+      $('sweepPanel').classList.add('hidden');
+      state.camera.ctx.clearRect(0, 0, state.camera.canvas.width, state.camera.canvas.height);
+      updateCameraStatus('📷 Cámara detenida');
+      showToast('📷 Cámara detenida');
+    }
+
+    // ===== DETECCIÓN =====
+    function getModeLabel() {
+      const labels = { 'people': 'Personas', 'faces': 'Rostros', 'faces-id': 'Rostros con ID' };
+      return labels[state.detection.mode] || 'Desconocido';
+    }
+
+    async function detectInFrame() {
+      if (!state.camera.isRunning || !state.camera.video.videoWidth) return [];
+      try {
+        let detections = [];
+        if (state.detection.mode === 'people') {
+          const predictions = await state.models.coco.detect(state.camera.video);
+          const people = predictions.filter(p => p.class === 'person');
+          detections = people.map(p => ({ bbox: p.bbox, score: p.score, label: `Persona ${Math.round(p.score * 100)}%` }));
+        } else if (state.detection.mode === 'faces') {
+          const faces = await state.models.blazeface.estimateFaces(state.camera.video, false);
+          detections = faces.map(f => {
+            const [x1, y1] = f.topLeft; const [x2, y2] = f.bottomRight;
+            return { bbox: [x1, y1, x2 - x1, y2 - y1], score: f.probability || 1, label: `Rostro ${Math.round((f.probability || 1) * 100)}%` };
           });
-          const scores = p.map(f=>f.probabilities?f.probabilities[0]:1);
-          drawBoxes(boxes, scores);
-          detectedCount = scores.filter(s=>s>=threshold).length;
+        } else if (state.detection.mode === 'faces-id') {
+          if (!state.models.faceApiLoaded) { detections = []; }
+          else {
+            const results = await faceapi.detectAllFaces(state.camera.video, CONFIG.models.faceDetOptions).withFaceLandmarks().withFaceDescriptors();
+            const now = performance.now();
+            const shouldRecognize = now - state.detection.lastRecognition > CONFIG.recognition.throttleMs;
+            detections = results.map(r => {
+              const { x, y, width, height } = r.detection.box;
+              let label = `Rostro ${Math.round(r.detection.score * 100)}%`;
+              let recognized = false;
+              if (shouldRecognize && r.descriptor) {
+                const match = recognizeFace(r.descriptor);
+                if (match) { label = `${match.name} (${match.distance.toFixed(2)})`; recognized = true; markStudentPresent(match.id); }
+              }
+              return { bbox: [x, y, width, height], score: r.detection.score, label, recognized };
+            });
+            if (shouldRecognize) state.detection.lastRecognition = now;
+          }
         }
-      }catch(err){
-        console.warn('Detect error', err);
-        setMsg('⚠️ Detección pausada por un error momentáneo');
+        detections = detections.filter(d => d.score >= state.detection.threshold);
+        state.detection.currentCount = detections.length;
+        return detections;
+      } catch (error) {
+        console.warn('Error en detección:', error);
+        return [];
       }
-      updateKPIs();
-    };
-    loopReq = requestAnimationFrame(step);
-  }
+    }
 
-  function captureSnapshot(){
-    if(!video.videoWidth){ setMsg('ℹ️ La cámara no está lista'); return; }
-    const tmp = document.createElement('canvas');
-    tmp.width = video.videoWidth; tmp.height = video.videoHeight;
-    const tctx = tmp.getContext('2d');
-    tctx.drawImage(video,0,0); // frame
-    tctx.drawImage(canvas,0,0); // overlay
-    const a = document.createElement('a');
-    a.href = tmp.toDataURL('image/png');
-    a.download = `captura_${new Date().toISOString().replace(/[:.]/g,'-')}.png`;
-    document.body.appendChild(a); a.click(); a.remove();
-  }
-
-  async function detectOnImage(file){
-    const img = new Image();
-    img.onload = async ()=>{
-      // Mostrar imagen en el <video> contenedor
-      stopCamera();
-      video.srcObject = null; video.pause();
-      // Pintar imagen en canvas de fondo usando drawImage en un canvas aparte
-      // Para simplificar, ajustamos el tamaño del canvas de overlay al de la imagen
-      canvas.width = img.naturalWidth; canvas.height = img.naturalHeight;
-      const bg = document.createElement('canvas');
-      bg.width = img.naturalWidth; bg.height = img.naturalHeight;
-      bg.getContext('2d').drawImage(img,0,0);
-      // Colocamos el bitmap de fondo dentro del contenedor de video
-      el('vw').style.position='relative';
-      // Insertamos el canvas de fondo antes del overlay si no existe
-      let old = el('bgimg');
-      if(!old){
-        old = document.createElement('canvas');
-        old.id = 'bgimg';
-        old.style.position = 'absolute'; old.style.inset = 0; old.style.width='100%'; old.style.height='100%';
-        el('vw').insertBefore(old, canvas);
-      }
-      old.width = img.naturalWidth; old.height = img.naturalHeight;
-      old.getContext('2d').drawImage(img,0,0);
-
-      await ensureModels();
-      try{
-        if(activeModel==='people'){
-          const preds = await coco.detect(img);
-          const p = preds.filter(o=>o.class==='person');
-          const boxes = p.map(o=>[o.bbox[0],o.bbox[1],o.bbox[2],o.bbox[3]]);
-          const scores = p.map(o=>o.score);
-          drawBoxes(boxes, scores);
-          detectedCount = scores.filter(s=>s>=threshold).length;
-        }else{
-          const p = await blaze.estimateFaces(img, false);
-          const boxes = p.map(f=>{const [x1,y1]=f.topLeft; const [x2,y2]=f.bottomRight; return [x1,y1,x2-x1,y2-y1];});
-          const scores = p.map(f=>f.probabilities?f.probabilities[0]:1);
-          drawBoxes(boxes, scores);
-          detectedCount = scores.filter(s=>s>=threshold).length;
+    function drawDetections(detections) {
+      const ctx = state.camera.ctx;
+      const canvas = state.camera.canvas;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.lineWidth = 3;
+      ctx.font = '14px -apple-system, sans-serif';
+      detections.forEach((detection, index) => {
+        const [x, y, w, h] = detection.bbox;
+        const color = detection.recognized ? '#22c55e' : state.sweep.active ? '#8b5cf6' : '#3b82f6';
+        ctx.strokeStyle = color;
+        ctx.strokeRect(x, y, w, h);
+        ctx.fillStyle = color;
+        const text = detection.label;
+        const textY = Math.max(y - 8, 16);
+        ctx.fillText(text, x + 4, textY);
+        if (state.sweep.active) {
+          ctx.fillStyle = '#8b5cf6';
+          ctx.fillRect(x + w - 25, y + 2, 23, 18);
+          ctx.fillStyle = 'white';
+          ctx.font = '12px sans-serif';
+          ctx.fillText((index + 1).toString(), x + w - 18, y + 14);
+          ctx.font = '14px -apple-system, sans-serif';
         }
+      });
+    }
+
+    function startDetectionLoop() {
+      const loop = async () => {
+        if (!state.camera.isRunning) return;
+        const detections = await detectInFrame();
+        drawDetections(detections);
+        if (state.sweep.active) processSweepDetections(detections);
         updateKPIs();
-        setMsg('🖼️ Detección terminada sobre la foto');
-      }catch(e){ setMsg('❌ Error al detectar en la foto'); }
-    };
-    img.onerror = ()=> setMsg('❌ No se pudo leer la imagen');
-    img.src = URL.createObjectURL(file);
-  }
-
-  // ====== Eventos UI ======
-  document.addEventListener('DOMContentLoaded',()=>{
-    // sliders
-    el('th').addEventListener('input', (e)=>{ threshold = e.target.value/100; el('thv').textContent = Math.round(threshold*100)+'%'; });
-
-    // modelo
-    document.querySelectorAll('input[name="model"]').forEach(r=>{
-      r.addEventListener('change', (e)=>{ activeModel = e.target.value; setMsg(`Modelo: ${activeModel==='people'?'COCO‑SSD':'BlazeFace'}`); });
-    });
-
-    // cámara
-    el('startCam').addEventListener('click', startCamera);
-    el('stopCam').addEventListener('click', stopCamera);
-    el('snap').addEventListener('click', captureSnapshot);
-
-    // foto
-    el('photoFile').addEventListener('change', (e)=>{ if(e.target.files[0]) detectOnImage(e.target.files[0]); e.target.value=''; });
-
-    // CSV
-    el('downloadTpl').addEventListener('click', downloadTemplate);
-    el('csvFile').addEventListener('change', async (e)=>{
-      if(!e.target.files[0]) return;
-      try{
-        students = await loadCSVFile(e.target.files[0]);
-        renderList(el('search').value);
-        setMsg(`✅ Cargados ${students.length} alumnos desde CSV`);
-      }catch(err){ setMsg('❌ Error leyendo CSV: '+ err.message); }
-      e.target.value='';
-    });
-
-    // lista
-    el('search').addEventListener('input', (e)=> renderList(e.target.value));
-    el('markAll').addEventListener('click', ()=>{ students.forEach(s=>s.present=true); renderList(el('search').value); });
-    el('clearAll').addEventListener('click', ()=>{ students.forEach(s=>s.present=false); renderList(el('search').value); });
-
-    // guardar / cargar / exportar
-    el('saveLocal').addEventListener('click', saveLocal);
-    el('loadLocal').addEventListener('click', loadLocal);
-    el('exportCsv').addEventListener('click', exportAttendance);
-
-    // seguridad / compatibilidad
-    if(!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)){
-      setMsg('⚠️ Tu navegador no soporta cámara (MediaDevices). Aún puedes cargar fotos y pasar lista.');
-    }
-    if(location.protocol!=='https:' && !['localhost','127.0.0.1'].includes(location.hostname)){
-      setMsg('🔒 Consejo: usa HTTPS para que el navegador permita la cámara.');
+        const interval = state.sweep.active ? CONFIG.ui.sweepInterval : CONFIG.ui.detectionInterval;
+        state.camera.animationFrame = setTimeout(() => { requestAnimationFrame(loop); }, interval);
+      };
+      requestAnimationFrame(loop);
     }
 
-    updateKPIs();
-  });
+    // ===== RECONOCIMIENTO FACIAL =====
+    function recognizeFace(descriptor) {
+      let bestMatch = null; let bestDistance = Infinity;
+      for (const [id, data] of state.facebank) {
+        for (const stored of data.descriptors) {
+          const distance = euclideanDistance(descriptor, stored);
+          if (distance < CONFIG.recognition.threshold && distance < bestDistance) {
+            bestDistance = distance;
+            bestMatch = { id, name: data.name, distance };
+          }
+        }
+      }
+      return bestMatch;
+    }
 
-  // Pausar cuando la pestaña no está visible
-  document.addEventListener('visibilitychange',()=>{ if(document.hidden && loopReq){ cancelAnimationFrame(loopReq); loopReq=null; } else if(!document.hidden && stream){ runLoop(); } });
+    function euclideanDistance(a, b) {
+      let sum = 0;
+      for (let i = 0; i < a.length; i++) {
+        const diff = a[i] - b[i];
+        sum += diff * diff;
+      }
+      return Math.sqrt(sum);
+    }
+
+    function markStudentPresent(studentId) {
+      const student = state.students.find(s => s.id === studentId);
+      if (student && !student.present) {
+        student.present = true;
+        renderStudentList();
+        showToast(`✅ Reconocido: ${student.name}`);
+      }
+    }
+
+    // ===== BARRIDO =====
+    function generateZoneId(x, y, width, height) {
+      const gridSize = 100;
+      const centerX = Math.floor((x + width / 2) / gridSize);
+      const centerY = Math.floor((y + height / 2) / gridSize);
+      return `${centerX}_${centerY}`;
+    }
+
+    function processSweepDetections(detections) {
+      const processed = new Map();
+      detections.forEach(detection => {
+        const [x, y, w, h] = detection.bbox;
+        const zoneId = generateZoneId(x, y, w, h);
+        if (!processed.has(zoneId)) processed.set(zoneId, { count: 0, maxConfidence: 0, detections: [] });
+        const zone = processed.get(zoneId);
+        zone.count++;
+        zone.maxConfidence = Math.max(zone.maxConfidence, detection.score);
+        zone.detections.push(detection);
+      });
+      processed.forEach((data, zoneId) => {
+        if (!state.sweep.zones.has(zoneId)) state.sweep.zones.set(zoneId, { count: 0, confidence: 0, timestamp: Date.now() });
+        const existing = state.sweep.zones.get(zoneId);
+        existing.count = Math.max(existing.count, data.count);
+        existing.confidence = Math.max(existing.confidence, data.maxConfidence);
+        existing.timestamp = Date.now();
+      });
+      state.sweep.totalUnique = Array.from(state.sweep.zones.values()).reduce((sum, zone) => sum + zone.count, 0);
+      state.sweep.confidence = state.sweep.zones.size > 0 ? Array.from(state.sweep.zones.values()).reduce((sum, zone) => sum + zone.confidence, 0) / state.sweep.zones.size : 0;
+      updateSweepUI();
+    }
+
+    function startSweep() {
+      if (!state.camera.isRunning) { showToast('⚠️ Inicia la cámara primero', 'error'); return; }
+      state.sweep.active = true; state.sweep.zones.clear(); state.sweep.totalUnique = 0; state.sweep.confidence = 0;
+      $('sweepBtn').disabled = true; $('stopSweepBtn').disabled = false; $('autoMarkBtn').disabled = false; $('sweepBadge').classList.remove('hidden'); $('sweepPanel').classList.remove('hidden');
+      updateCameraStatus('🔄 Modo barrido activo - Mueve la cámara lentamente'); showToast('🔄 Barrido iniciado - Escanea todo el aula');
+    }
+
+    function stopSweep() {
+      state.sweep.active = false;
+      $('sweepBtn').disabled = false; $('stopSweepBtn').disabled = true; $('sweepBadge').classList.add('hidden');
+      updateCameraStatus(`✅ Barrido completado - ${state.sweep.totalUnique} personas detectadas`); showToast(`✅ Barrido terminado: ${state.sweep.totalUnique} detecciones`);
+    }
+
+    function autoMarkAttendance() {
+      if (state.sweep.totalUnique === 0 || state.students.length === 0) { showToast('⚠️ No hay datos suficientes para marcar automáticamente', 'error'); return; }
+      const ratio = Math.min(1, state.sweep.totalUnique / state.students.length);
+      const toMark = Math.round(state.students.length * ratio);
+      state.students.forEach(s => s.present = false);
+      state.students.slice(0, toMark).forEach(s => s.present = true);
+      renderStudentList(); showToast(`✨ Marcados ${toMark} de ${state.students.length} estudiantes`);
+    }
+
+    function updateSweepUI() {
+      const zones = Array.from(state.sweep.zones.entries()).filter(([_, zone]) => zone.count > 0).sort(([a], [b]) => a.localeCompare(b));
+      const zonesList = $('sweepZones');
+      zonesList.innerHTML = zones.map(([id, zone]) => `
+        <div class="zone-item">
+          <span>Zona ${id.replace('_', '-')}</span>
+          <div style="display:flex; gap:6px; align-items:center">
+            <span style="font-size:10px; color:var(--text-muted)">${Math.round(zone.confidence * 100)}%</span>
+            <span class="zone-count">${zone.count}</span>
+          </div>
+        </div>
+      `).join('');
+      $('sweepConfidence').textContent = Math.round(state.sweep.confidence * 100) + '%';
+      $('confidenceFill').style.width = Math.round(state.sweep.confidence * 100) + '%';
+    }
+
+    // ===== GESTIÓN DE ESTUDIANTES =====
+    function renderStudentList(filter = '') {
+      const list = $('studentList');
+      const query = filter.toLowerCase().trim();
+      const filtered = state.students.filter(student => {
+        if (!query) return true;
+        return student.name.toLowerCase().includes(query) || (student.id && student.id.toLowerCase().includes(query));
+      });
+      if (filtered.length === 0) {
+        list.innerHTML = query ? '<div style="text-align:center; color:var(--text-muted); padding:20px">🔍 No se encontraron estudiantes</div>' : '<div style="text-align:center; color:var(--text-muted); padding:40px">📋 Carga un archivo CSV para comenzar</div>';
+        return;
+      }
+
+      list.innerHTML = filtered.map((student) => {
+        const originalIndex = state.students.findIndex(s => s.id === student.id);
+        const hasFace = state.facebank.has(student.id);
+        // miniatura si existe
+        let thumbHtml = '';
+        if (hasFace) {
+          const fb = state.facebank.get(student.id);
+          const lastImg = fb && fb.images && fb.images.length ? fb.images[fb.images.length - 1] : null;
+          if (lastImg) {
+            thumbHtml = `<img src="${lastImg}" alt="rostro" style="width:44px; height:44px; border-radius:6px; object-fit:cover; margin-right:8px">`;
+          }
+        }
+        return `
+          <div class="student-item">
+            <input type="checkbox" class="student-checkbox" ${student.present ? 'checked' : ''} onchange="toggleStudentPresence(${originalIndex})">
+            ${thumbHtml}
+            <div class="student-info">
+              <div class="student-name">${student.name}</div>
+              ${student.id ? `<div class="student-id">ID: ${student.id}</div>` : ''}
+            </div>
+            <div class="student-status ${student.present ? 'present' : 'absent'}">${student.present ? 'Presente' : 'Ausente'}</div>
+            <button class="register-btn ${hasFace ? 'has-face' : ''}" onclick="openRegisterModal(${originalIndex})">🎯 ${hasFace ? 'Actualizar' : 'Registrar'}</button>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function toggleStudentPresence(index) {
+      state.students[index].present = !state.students[index].present;
+      updateKPIs();
+      renderStudentList($('searchInput').value);
+    }
+
+    async function loadCSV(file) {
+      return new Promise((resolve, reject) => {
+        Papa.parse(file, {
+          header: true,
+          skipEmptyLines: true,
+          complete: (results) => {
+            try {
+              const students = results.data.map(row => {
+                const name = (row.Nombre || row.NOMBRE || row.name || row.Name || '').toString().trim();
+                const id = (row.ID || row.Id || row.id || '').toString().trim();
+                return name ? { id: id || name, name, present: false } : null;
+              }).filter(Boolean);
+              if (students.length === 0) throw new Error('No se encontraron estudiantes válidos en el CSV');
+              resolve(students);
+            } catch (error) {
+              reject(error);
+            }
+          },
+          error: reject
+        });
+      });
+    }
+
+    function downloadTemplate() {
+      const csv = 'ID,Nombre\n2024001,Ana García López\n2024002,Carlos Mendoza\n2024003,María González\n2024004,Juan Rodríguez\n2024005,Laura Martínez\n';
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'plantilla_estudiantes.csv';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    function exportAttendance() {
+      const now = new Date();
+      const timestamp = now.toISOString().replace(/[:.]/g, '-');
+      let csv = 'Reporte de Asistencia\n';
+      csv += `Fecha: ${now.toLocaleDateString('es-ES')}\n`;
+      csv += `Hora: ${now.toLocaleTimeString('es-ES')}\n`;
+      csv += `Detectados actuales: ${state.detection.currentCount}\n`;
+      csv += `Total en barrido: ${state.sweep.totalUnique}\n\n`;
+      csv += 'ID,Nombre,Estado\n';
+      state.students.forEach(student => {
+        csv += `"${student.id}","${student.name}","${student.present ? 'Presente' : 'Ausente'}"\n`;
+      });
+      const present = state.students.filter(s => s.present).length;
+      csv += `\nRESUMEN\n`;
+      csv += `Total estudiantes: ${state.students.length}\n`;
+      csv += `Presentes: ${present}\n`;
+      csv += `Ausentes: ${state.students.length - present}\n`;
+      csv += `Porcentaje asistencia: ${state.students.length ? Math.round((present / state.students.length) * 100) : 0}%\n`;
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `asistencia_${timestamp}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showToast('💾 Reporte exportado correctamente');
+    }
+
+    // ===== MODAL REGISTRO Y GUARDADO DE ROSTROS (recorte + persistencia) =====
+    function openRegisterModal(studentIndex) {
+      state.ui.currentStudentIndex = studentIndex;
+      const student = state.students[studentIndex];
+      $('modalStudentName').textContent = `${student.name}${student.id ? ' • ' + student.id : ''}`;
+      $('registerModal').classList.remove('hidden');
+      $('saveFaceBtn').disabled = true;
+      const canvas = $('faceCanvas');
+      const ctx = canvas.getContext('2d');
+      canvas.width = 400; canvas.height = 300;
+      ctx.fillStyle = '#1e293b'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = '#94a3b8'; ctx.font = '14px sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText('Selecciona "Usar Cámara" o "Subir Foto"', canvas.width / 2, canvas.height / 2);
+      state.ui.modalOpen = true;
+    }
+
+    function closeRegisterModal() {
+      $('registerModal').classList.add('hidden');
+      state.ui.currentStudentIndex = -1;
+      state.ui.modalOpen = false;
+    }
+
+    async function useFrameForRegistration() {
+      if (!state.camera.isRunning) { showToast('⚠️ La cámara no está activa', 'error'); return; }
+      const canvas = $('faceCanvas'); const ctx = canvas.getContext('2d'); const video = state.camera.video;
+      canvas.width = video.videoWidth; canvas.height = video.videoHeight; ctx.drawImage(video, 0, 0);
+      $('saveFaceBtn').disabled = false; showToast('📷 Fotograma capturado - Revisa y guarda');
+    }
+
+    async function usePhotoForRegistration(file) {
+      const canvas = $('faceCanvas'); const ctx = canvas.getContext('2d');
+      const img = new Image();
+      img.onload = () => {
+        canvas.width = img.naturalWidth; canvas.height = img.naturalHeight; ctx.drawImage(img, 0, 0);
+        $('saveFaceBtn').disabled = false; showToast('🖼️ Foto cargada - Revisa y guarda');
+      };
+      img.onerror = () => showToast('⚠️ Error cargando la imagen', 'error');
+      img.src = URL.createObjectURL(file);
+    }
+
+    async function saveFaceSample() {
+      if (state.ui.currentStudentIndex === -1) return;
+      if (!state.models.faceApiLoaded) { showToast('⚠️ Los modelos de reconocimiento aún se están cargando', 'error'); return; }
+
+      const canvas = $('faceCanvas');
+      const student = state.students[state.ui.currentStudentIndex];
+
+      try {
+        // Detectar en el canvas de la modal
+        const detection = await faceapi.detectSingleFace(canvas, CONFIG.models.faceDetOptions).withFaceLandmarks().withFaceDescriptor();
+        if (!detection) { showToast('⚠️ No se detectó un rostro claro en la imagen', 'error'); return; }
+
+        // Obtener bounding box y recortar (con pequeño padding)
+        const pad = 0.15; // 15% padding para evitar recortar demasiado ajustado
+        const rawBox = detection.detection.box;
+        const sx = Math.max(0, Math.floor(rawBox.x - rawBox.width * pad));
+        const sy = Math.max(0, Math.floor(rawBox.y - rawBox.height * pad));
+        const sw = Math.min(canvas.width - sx, Math.floor(rawBox.width + rawBox.width * pad * 2));
+        const sh = Math.min(canvas.height - sy, Math.floor(rawBox.height + rawBox.height * pad * 2));
+
+        const faceCanvas = document.createElement('canvas');
+        faceCanvas.width = sw; faceCanvas.height = sh;
+        const faceCtx = faceCanvas.getContext('2d');
+        faceCtx.drawImage(canvas, sx, sy, sw, sh, 0, 0, sw, sh);
+
+        // Convertir recorte a dataURL (base64)
+        const croppedFaceDataUrl = faceCanvas.toDataURL('image/png');
+
+        // Guardar descriptor y la imagen recortada en state.facebank
+        if (!state.facebank.has(student.id)) {
+          state.facebank.set(student.id, { name: student.name, descriptors: [], images: [] });
+        }
+        const faceData = state.facebank.get(student.id);
+        faceData.descriptors.push(new Float32Array(detection.descriptor));
+        faceData.images.push(croppedFaceDataUrl);
+
+        // Guardar en almacenamiento persistente (IndexedDB preferido, localStorage fallback)
+        await saveFaceBankToStorage();
+
+        closeRegisterModal();
+        renderStudentList($('searchInput').value);
+        showToast(`✅ Rostro registrado para ${student.name}`);
+
+      } catch (error) {
+        console.error('Error guardando muestra facial:', error);
+        showToast('⚠️ Error procesando el rostro', 'error');
+      }
+    }
+
+    // ===== PERSISTENCIA DE FACEBANK (localStorage + IndexedDB) =====
+    async function saveFaceBankToStorage() {
+      try {
+        // Serializar
+        const data = {};
+        for (const [id, faceData] of state.facebank) {
+          data[id] = {
+            name: faceData.name,
+            descriptors: faceData.descriptors.map(desc => Array.from(desc)),
+            images: faceData.images || []
+          };
+        }
+        // Guardar en localStorage (respaldo inmediato)
+        try {
+          localStorage.setItem('facebank_v6', JSON.stringify(data));
+        } catch (e) {
+          console.warn('No se pudo guardar en localStorage:', e);
+        }
+        // Intentar IndexedDB (preferido)
+        await saveFacebankToIndexedDB(data);
+      } catch (error) {
+        console.error('Error guardando facebank:', error);
+      }
+    }
+
+    async function loadFaceBankFromStorage() {
+      try {
+        // Intentar leer desde IndexedDB
+        const fromDB = await loadFacebankFromIndexedDB();
+        let parsed = null;
+        if (fromDB) parsed = fromDB;
+        else {
+          const raw = localStorage.getItem('facebank_v6');
+          if (!raw) return;
+          parsed = JSON.parse(raw);
+        }
+        for (const [id, faceData] of Object.entries(parsed)) {
+          state.facebank.set(id, {
+            name: faceData.name,
+            descriptors: faceData.descriptors.map(desc => new Float32Array(desc)),
+            images: faceData.images || []
+          });
+        }
+        console.log('Facebank cargado con', state.facebank.size, 'entradas');
+      } catch (error) {
+        console.error('Error cargando facebank:', error);
+      }
+    }
+
+    // ===== DETECCIÓN EN IMAGEN (para upload) =====
+    async function detectInPhoto(file) {
+      const img = new Image();
+      img.onload = async () => {
+        const wasRunning = state.camera.isRunning;
+        if (wasRunning) stopCamera();
+
+        const canvas = state.camera.canvas;
+        const ctx = state.camera.ctx;
+        canvas.width = img.naturalWidth; canvas.height = img.naturalHeight;
+        let bgCanvas = $('bgCanvas');
+        if (!bgCanvas) {
+          bgCanvas = document.createElement('canvas');
+          bgCanvas.id = 'bgCanvas';
+          bgCanvas.style.position = 'absolute'; bgCanvas.style.top = '0'; bgCanvas.style.left = '0'; bgCanvas.style.width = '100%'; bgCanvas.style.height = '100%'; bgCanvas.style.zIndex = '1';
+          state.camera.canvas.parentNode.insertBefore(bgCanvas, state.camera.canvas);
+        }
+        bgCanvas.width = img.naturalWidth; bgCanvas.height = img.naturalHeight;
+        bgCanvas.getContext('2d').drawImage(img, 0, 0);
+
+        updateCameraStatus('🖼️ Analizando foto...');
+        try {
+          const detections = await detectInImage(img);
+          drawDetections(detections);
+          state.detection.currentCount = detections.length;
+          updateKPIs();
+          updateCameraStatus(`✅ Análisis completado: ${detections.length} ${getModeLabel().toLowerCase()} encontrados`);
+          showToast(`🖼️ Detectados ${detections.length} ${getModeLabel().toLowerCase()} en la foto`);
+        } catch (error) {
+          console.error('Error detectando en foto:', error);
+          updateCameraStatus('❌ Error analizando la foto');
+          showToast('⚠️ Error analizando la imagen', 'error');
+        } finally {
+          if (wasRunning) startCamera();
+        }
+      };
+      img.onerror = () => showToast('⚠️ Error cargando la imagen', 'error');
+      img.src = URL.createObjectURL(file);
+    }
+
+    async function detectInImage(img) {
+      let detections = [];
+      if (state.detection.mode === 'people') {
+        const predictions = await state.models.coco.detect(img);
+        const people = predictions.filter(p => p.class === 'person');
+        detections = people.map(p => ({ bbox: p.bbox, score: p.score, label: `Persona ${Math.round(p.score * 100)}%` }));
+      } else if (state.detection.mode === 'faces') {
+        const faces = await state.models.blazeface.estimateFaces(img, false);
+        detections = faces.map(f => {
+          const [x1, y1] = f.topLeft; const [x2, y2] = f.bottomRight;
+          return { bbox: [x1, y1, x2 - x1, y2 - y1], score: f.probability || 1, label: `Rostro ${Math.round((f.probability || 1) * 100)}%` };
+        });
+      } else if (state.detection.mode === 'faces-id') {
+        if (!state.models.faceApiLoaded) throw new Error('Modelos de reconocimiento aún no están listos');
+        const results = await faceapi.detectAllFaces(img, CONFIG.models.faceDetOptions).withFaceLandmarks().withFaceDescriptors();
+        detections = results.map(r => {
+          const { x, y, width, height } = r.detection.box;
+          let label = `Rostro ${Math.round(r.detection.score * 100)}%`;
+          let recognized = false;
+          if (r.descriptor) {
+            const match = recognizeFace(r.descriptor);
+            if (match) { label = `${match.name} (${match.distance.toFixed(2)})`; recognized = true; markStudentPresent(match.id); }
+          }
+          return { bbox: [x, y, width, height], score: r.detection.score, label, recognized };
+        });
+      }
+      return detections.filter(d => d.score >= state.detection.threshold);
+    }
+
+    // ===== UI / KPIs =====
+    function updateKPIs() {
+      const present = state.students.filter(s => s.present).length;
+      const absent = state.students.length - present;
+      $('kpiDetected').textContent = state.detection.currentCount;
+      $('kpiTotal').textContent = state.sweep.totalUnique;
+      $('kpiPresent').textContent = present;
+      $('kpiAbsent').textContent = absent;
+    }
+
+    function captureSnapshot() {
+      if (!state.camera.isRunning) { showToast('⚠️ La cámara no está activa', 'error'); return; }
+      const video = state.camera.video; const overlay = state.camera.canvas;
+      const tempCanvas = document.createElement('canvas'); tempCanvas.width = video.videoWidth; tempCanvas.height = video.videoHeight;
+      const tempCtx = tempCanvas.getContext('2d');
+      tempCtx.drawImage(video, 0, 0); tempCtx.drawImage(overlay, 0, 0);
+      if (state.sweep.active) {
+        tempCtx.fillStyle = 'rgba(0, 0, 0, 0.8)'; tempCtx.fillRect(10, 10, 300, 80);
+        tempCtx.fillStyle = 'white'; tempCtx.font = '16px sans-serif';
+        tempCtx.fillText('🔄 MODO BARRIDO ACTIVO', 20, 30);
+        tempCtx.fillText(`Total detectado: ${state.sweep.totalUnique}`, 20, 50);
+        tempCtx.fillText(`Zonas: ${state.sweep.zones.size}`, 20, 70);
+      }
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      tempCanvas.toBlob((blob) => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = `captura_${timestamp}.png`; document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+      });
+      showToast('📸 Captura guardada');
+    }
+
+    // ===== EXPORT / IMPORT FACEBANK JSON (respaldos) =====
+    function exportFacebankAsJSON() {
+      const data = {};
+      for (const [id, faceData] of state.facebank) {
+        data[id] = {
+          name: faceData.name,
+          descriptors: faceData.descriptors.map(desc => Array.from(desc)),
+          images: faceData.images || []
+        };
+      }
+      const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = url; a.download = 'facebank_respaldo.json'; document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+      showToast('📤 Respaldo de rostros descargado');
+    }
+
+    async function importFacebankFromFile(file) {
+      try {
+        const text = await file.text();
+        const parsed = JSON.parse(text);
+        // Integrar en state.facebank (fusionar)
+        for (const [id, faceData] of Object.entries(parsed)) {
+          const descriptors = (faceData.descriptors || []).map(d => new Float32Array(d));
+          const images = faceData.images || [];
+          if (!state.facebank.has(id)) {
+            state.facebank.set(id, { name: faceData.name || '---', descriptors: descriptors, images: images });
+          } else {
+            const existing = state.facebank.get(id);
+            existing.descriptors = existing.descriptors.concat(descriptors);
+            existing.images = (existing.images || []).concat(images);
+          }
+        }
+        await saveFaceBankToStorage();
+        renderStudentList();
+        showToast('📥 Respaldo importado correctamente');
+      } catch (e) {
+        console.error('Error importando respaldo:', e);
+        showToast('⚠️ Error importando respaldo', 'error');
+      }
+    }
+
+    // ===== EVENT LISTENERS =====
+    function setupEventListeners() {
+      $('startBtn').addEventListener('click', startCamera);
+      $('stopBtn').addEventListener('click', stopCamera);
+      $('captureBtn').addEventListener('click', captureSnapshot);
+      $('photoInput').addEventListener('change', (e) => {
+        if (e.target.files[0]) detectInPhoto(e.target.files[0]);
+        e.target.value = '';
+      });
+      $('sweepBtn').addEventListener('click', startSweep);
+      $('stopSweepBtn').addEventListener('click', stopSweep);
+      $('autoMarkBtn').addEventListener('click', autoMarkAttendance);
+      $$('input[name="mode"]').forEach(radio => radio.addEventListener('change', (e) => { state.detection.mode = e.target.value; if (state.camera.isRunning) updateCameraStatus(`✅ Cámara activa - Modo: ${getModeLabel()}`); }));
+      $('threshold').addEventListener('input', (e) => { state.detection.threshold = parseInt(e.target.value) / 100; $('thresholdValue').textContent = `${e.target.value}%`; });
+      $('searchInput').addEventListener('input', (e) => renderStudentList(e.target.value));
+      $('csvInput').addEventListener('change', async (e) => {
+        if (e.target.files[0]) {
+          try {
+            const students = await loadCSV(e.target.files[0]);
+            state.students = students; renderStudentList(); updateKPIs(); showToast(`✅ ${students.length} estudiantes cargados`);
+          } catch (error) { showToast('⚠️ Error cargando el CSV: ' + error.message, 'error'); }
+        }
+        e.target.value = '';
+      });
+      $('templateBtn').addEventListener('click', downloadTemplate);
+      $('markAllBtn').addEventListener('click', () => { state.students.forEach(s => s.present = true); renderStudentList($('searchInput').value); updateKPIs(); showToast('✅ Todos marcados como presentes'); });
+      $('clearAllBtn').addEventListener('click', () => { state.students.forEach(s => s.present = false); renderStudentList($('searchInput').value); updateKPIs(); showToast('✅ Todos marcados como ausentes'); });
+      $('exportBtn').addEventListener('click', exportAttendance);
+      $('closeModalBtn').addEventListener('click', closeRegisterModal);
+      $('useFrameBtn').addEventListener('click', useFrameForRegistration);
+      $('faceInput').addEventListener('change', (e) => { if (e.target.files[0]) usePhotoForRegistration(e.target.files[0]); e.target.value = ''; });
+      $('saveFaceBtn').addEventListener('click', saveFaceSample);
+      // Export/Import facebank
+      $('exportFacebankBtn').addEventListener('click', exportFacebankAsJSON);
+      $('importFacebankInput').addEventListener('change', (e) => { if (e.target.files[0]) importFacebankFromFile(e.target.files[0]); e.target.value = ''; });
+    }
+
+    // ===== INICIALIZACIÓN =====
+    async function initApp() {
+      try {
+        setupEventListeners();
+        // Pedir persistencia (si está disponible)
+        requestPersistentStorage();
+        // Cargar modelos + datos
+        await loadModels();
+      } catch (error) {
+        console.error('Error inicializando la aplicación:', error);
+        updateStatus('Error inicializando la app', false);
+        showToast('⚠️ Error crítico al iniciar la aplicación', 'error');
+      }
+    }
+
+    // Ejecutar al cargar
+    document.addEventListener('DOMContentLoaded', initApp);
   </script>
 </body>
 </html>
